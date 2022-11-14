@@ -11,7 +11,6 @@ const app = express();
 app.use(express.json());
 app.use(cors());
 const mongoClient = new MongoClient(process.env.MONGO_URI)
-const now = dayjs().locale("pt-br").format("HH:mm:ss");
 
 const participantSchema = joi.object({
     name:joi.string().required(),
@@ -63,7 +62,7 @@ app.post('/participants', async(req, res) => {
         }
 
         await db.collection('participants').insertOne({name: req.body.name, lastStatus: Date.now()});
-        await db.collection('messages').insertOne({from: req.body.name, to: 'Todos', text: 'entra na sala...', type: 'status', time: now})
+        await db.collection('messages').insertOne({from: req.body.name, to: 'Todos', text: 'entra na sala...', type: 'status', time: dayjs().locale("pt-br").format("HH:mm:ss")})
         res.sendStatus(201);
 
     }   catch (err) {
@@ -74,13 +73,19 @@ app.post('/participants', async(req, res) => {
 
 app.post('/messages', async(req, res) => {
     try{
-        const validation = messageSchema.validate(req.body)
+        const validation = messageSchema.validate(req.body);
         if(validation.error){
             const errors = validation.error.details.map(detail => detail.message);
             res.send(errors).status(422);
             return;
         }
-        await db.collection('messages').insertOne({from: req.headers.user, to:req.body.to, text:req.body.text, type:req.body.type, time: now})
+        const userAvailable = await db.collection('participants').find({name: req.headers.user}).toArray();
+        if(userAvailable.length === 0){
+            console.log(userAvailable)
+            res.sendStatus(422);
+            return;
+        }
+        await db.collection('messages').insertOne({from: req.headers.user, to:req.body.to, text:req.body.text, type:req.body.type, time: dayjs().locale("pt-br").format("HH:mm:ss")});
         res.sendStatus(201);
     } catch (err) {
         console.log(err);
@@ -106,9 +111,8 @@ app.get('/messages', async(req, res) => {
 app.post('/status', async(req, res) => {
     try{
         const participantExists = await db.collection('participants').find({name:req.headers.user}).toArray();
-        console.log(participantExists)
         if(participantExists.length !== 0){
-            await db.collection('participants').update({name: req.headers.user}, {$set:{lastStatus:Date.now()}})
+            await db.collection('participants').update({name: req.headers.user}, {$set:{lastStatus:Date.now()}});
             res.sendStatus(200);
             return;
         }
@@ -121,24 +125,24 @@ app.post('/status', async(req, res) => {
 })
 
 async function userOnline(){
-    const timeNow = Date.now()
+    const timeNow = Date.now();
     const users = await db.collection('participants').find().toArray();
     users.map((user) => {
         if(timeNow - user.lastStatus >10000){
-            db.collection('participants').deleteOne({_id: ObjectId(user._id)})
+            db.collection('participants').deleteOne({_id: ObjectId(user._id)});
             db.collection('messages').insertOne({
                 from: user.name,
                 to: "Todos",
                 text: "sai da sala...",
                 type: "status",
-                time: now,
-              })
+                time: dayjs().locale("pt-br").format("HH:mm:ss"),
+              });
         }
-    })
+    });
     
 
 }
 
-setInterval(userOnline, 15000)
+setInterval(userOnline, 15000);
 
-app.listen(5000, () => console.log("Server running at port 5000"))
+app.listen(5000, () => console.log("Server running at port 5000"));
