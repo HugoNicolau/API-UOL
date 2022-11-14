@@ -1,12 +1,15 @@
 import express from "express";
-import {MongoClient} from "mongodb";
+import {MongoClient, ObjectId} from "mongodb";
 import dotenv from "dotenv";
 import joi from 'joi'
 import dayjs from "dayjs"
+import cors from "cors";
+
 
 dotenv.config();
 const app = express();
 app.use(express.json());
+app.use(cors());
 const mongoClient = new MongoClient(process.env.MONGO_URI)
 const now = dayjs().locale("pt-br").format("HH:mm:ss");
 
@@ -77,7 +80,7 @@ app.post('/messages', async(req, res) => {
             res.send(errors).status(422);
             return;
         }
-        await db.collection('messages').insertOne({from: req.headers.name, to:req.body.to, text:req.body.text, type:req.body.type, time: now})
+        await db.collection('messages').insertOne({from: req.headers.user, to:req.body.to, text:req.body.text, type:req.body.type, time: now})
         res.sendStatus(201);
     } catch (err) {
         console.log(err);
@@ -88,11 +91,11 @@ app.post('/messages', async(req, res) => {
 app.get('/messages', async(req, res) => {
     try{
         if(req.query.limit){
-            const allMessages = await db.collection('messages').find({$or: [{from: req.headers.name}, {to: req.headers.name}, {type: "message"}, {type: "status"}]}).limit(Number(req.query.limit)).toArray();
+            const allMessages = await db.collection('messages').find({$or: [{from: req.headers.user}, {to: req.headers.user}, {type: "message"}, {type: "status"}]}).limit(Number(req.query.limit)).toArray();
         res.send(allMessages).status(201);
         return;
         }
-        const allMessages = await db.collection('messages').find({$or: [{from: req.headers.name}, {to: req.headers.name}, {type: "message"}, {type: "status"}]}).toArray();
+        const allMessages = await db.collection('messages').find({$or: [{from: req.headers.user}, {to: req.headers.user}, {type: "message"}, {type: "status"}]}).toArray();
         res.send(allMessages).status(201);
     } catch (err) {
         console.log(err);
@@ -100,7 +103,42 @@ app.get('/messages', async(req, res) => {
     }
 })
 
+app.post('/status', async(req, res) => {
+    try{
+        const participantExists = await db.collection('participants').find({name:req.headers.user}).toArray();
+        console.log(participantExists)
+        if(participantExists.length !== 0){
+            await db.collection('participants').update({name: req.headers.user}, {$set:{lastStatus:Date.now()}})
+            res.sendStatus(200);
+            return;
+        }
+        res.sendStatus(404);
+        return;
+    }catch(err) {
+        console.log(err);
+        res.sendStatus(422);
+    }
+})
 
+async function userOnline(){
+    const timeNow = Date.now()
+    const users = await db.collection('participants').find().toArray();
+    users.map((user) => {
+        if(timeNow - user.lastStatus >10000){
+            db.collection('participants').deleteOne({_id: ObjectId(user._id)})
+            db.collection('messages').insertOne({
+                from: user.name,
+                to: "Todos",
+                text: "sai da sala...",
+                type: "status",
+                time: now,
+              })
+        }
+    })
+    
 
+}
+
+setInterval(userOnline, 15000)
 
 app.listen(5000, () => console.log("Server running at port 5000"))
