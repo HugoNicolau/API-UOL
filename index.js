@@ -78,7 +78,6 @@ app.post('/messages', async(req, res) => {
             return;
         }
         await db.collection('messages').insertOne({from: req.headers.name, to:req.body.to, text:req.body.text, type:req.body.type, time: now})
-        console.log(req.headers)
         res.sendStatus(201);
     } catch (err) {
         console.log(err);
@@ -88,8 +87,13 @@ app.post('/messages', async(req, res) => {
 
 app.get('/messages', async(req, res) => {
     try{
+        if(req.query.limit){
+            const allMessages = await db.collection('messages').find().limit(Number(req.query.limit)).toArray();
+        res.send(allMessages).status(201);
+        return;
+        }
         const allMessages = await db.collection('messages').find().toArray();
-        res.send(allMessages).status(201)
+        res.send(allMessages).status(201);
     } catch (err) {
         console.log(err);
         res.sendStatus(422);
