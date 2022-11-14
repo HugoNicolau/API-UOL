@@ -77,7 +77,8 @@ app.post('/messages', async(req, res) => {
             res.send(errors).status(422);
             return;
         }
-        await db.collection('messages').insertOne({from: req.header.user, to:req.body.to, text:req.body.text, type:req.body.type, time: now})
+        await db.collection('messages').insertOne({from: req.headers.name, to:req.body.to, text:req.body.text, type:req.body.type, time: now})
+        console.log(req.headers)
         res.sendStatus(201);
     } catch (err) {
         console.log(err);
@@ -85,9 +86,9 @@ app.post('/messages', async(req, res) => {
     }
 })
 
-app.get('messages', async(req, res) => {
+app.get('/messages', async(req, res) => {
     try{
-        const allMessages = db.collection('messages').find().toArray();
+        const allMessages = await db.collection('messages').find().toArray();
         res.send(allMessages).status(201)
     } catch (err) {
         console.log(err);
