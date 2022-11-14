@@ -88,11 +88,11 @@ app.post('/messages', async(req, res) => {
 app.get('/messages', async(req, res) => {
     try{
         if(req.query.limit){
-            const allMessages = await db.collection('messages').find().limit(Number(req.query.limit)).toArray();
+            const allMessages = await db.collection('messages').find({$or: [{from: req.headers.name}, {to: req.headers.name}, {type: "message"}, {type: "status"}]}).limit(Number(req.query.limit)).toArray();
         res.send(allMessages).status(201);
         return;
         }
-        const allMessages = await db.collection('messages').find().toArray();
+        const allMessages = await db.collection('messages').find({$or: [{from: req.headers.name}, {to: req.headers.name}, {type: "message"}, {type: "status"}]}).toArray();
         res.send(allMessages).status(201);
     } catch (err) {
         console.log(err);
