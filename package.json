@@ -1,0 +1,23 @@
+{
+  "name": "api-uol",
+  "version": "1.0.0",
+  "description": "my uol api",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/HugoNicolau/API-UOL.git"
+  },
+  "author": "Hugo Nicolau",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/HugoNicolau/API-UOL/issues"
+  },
+  "homepage": "https://github.com/HugoNicolau/API-UOL#readme",
+  "dependencies": {
+    "express": "^4.18.2"
+  }
+}
